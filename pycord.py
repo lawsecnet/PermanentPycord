@@ -1,11 +1,14 @@
+from typing import Text
 import requests
 import argparse
 from bs4 import BeautifulSoup
+import csv
+import re
 
 
 cliparse = argparse.ArgumentParser()
-cliparse.add_argument("-d", "--domain", help="Targeted domain", dest="t_domain")
-cliparse.add_argument("-u", "--user-agent", help="Select user agent string", dest="agent_select")
+cliparse.add_argument("-d", "--domain", help="Targeted domain", dest="t_domain", required=True)
+cliparse.add_argument("-u", "--user-agent", help="Select user agent string - use firefox, chrome, opera or safari as parameter", dest="agent_select")
 args = cliparse.parse_args()
 
 agent_s = args.agent_select
@@ -38,10 +41,33 @@ def pycord():
     print("PermanentPycord by lawsecnet v0.1/n")
 
     domain = args.t_domain
+    domainfn = re.sub('\W+', '', domain)
     page = requests.get("https://" + domain, headers=header)
 
-    soup = BeautifulSoup(page.content, "lxml")
+    soup = BeautifulSoup(page.content, 'html.parser')
 
-    print(soup.text)
+    filename = domainfn + "_scraped.csv"
+    csv_writer = csv.writer(open(filename, 'w'))
+
+    for tr in soup.find_all("tr"):
+        data = []
+
+        for th in tr.find_all("th"):
+            data.append(th.text)
+
+        if data:
+            print("Headers: {}".format(','.join(data)))
+            csv_writer.writerow(data)
+            continue
+
+        for td in tr.find_all("td"):
+            if td.a:
+                data.append(td.a.text.strip())
+            else:
+                data.append(td.text.strip())
+        if data:
+            print("Inserting data: {}".format(','.join(data)))
+            csv_writer.writerow(data)
+
 
 pycord()
